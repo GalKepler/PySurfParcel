@@ -20,7 +20,9 @@ class Layout:
             Path to the subject directory containing the output of Freesurfer's recon-all command.
         """
         self.subject_dir = Path(subject_dir)
+        self.subject_id = self.subject_dir.name
         self.parse_run_metadata()
+        self.outputs = self.collect_outputs()
 
     def parse_run_metadata(self):
         """
@@ -40,7 +42,7 @@ class Layout:
         with open(metadata_dir / "unknown-args.txt", "r") as f:
             self.run_metadata["command_line"] = f.read().replace("\n", " ")
 
-    def collect_outputs(self, outputs: dict = OUTPUTS) -> dict:
+    def collect_outputs(self, output_spec: dict = OUTPUTS) -> dict:
         """
         Collect the outputs specified in the outputs dictionary.
 
@@ -54,8 +56,18 @@ class Layout:
         dict
             Dictionary of outputs collected
         """
-        self.outputs = {}
-        for output_name, output_path in outputs.items():
-            result = self.subject_dir / output_path
-            self.outputs[output_name] = result if result.exists() else None
-        return self.outputs
+        outputs = {}
+        for output_name, output_path in output_spec.items():
+            outputs[output_name] = None
+            results = list(self.subject_dir.glob(output_path))
+            if len(results) == 1:
+                outputs[output_name] = results[0]
+            elif len(results) > 1:
+                hemis = {}
+                for result in results:
+                    if result.name.startswith("lh"):
+                        hemis["lh"] = result
+                    elif result.name.startswith("rh"):
+                        hemis["rh"] = result
+                outputs[output_name] = hemis
+        return outputs
