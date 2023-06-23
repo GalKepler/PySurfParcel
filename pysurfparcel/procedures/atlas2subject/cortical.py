@@ -5,6 +5,7 @@ from pysurfparcel.interfaces.freesurfer.preprocess import (
     MRIsAnatomicalStats,
     MRIsCALabel,
 )
+from freesurfer_statistics.cortical_stats import CorticalStats
 
 
 class RegisterCorticalParcellation:
@@ -124,6 +125,46 @@ class RegisterCorticalParcellation:
             stats.run()
         return out_file
 
+    def convert_stats_to_dataframe(
+        self, hemi: str, force: bool = True
+    ) -> Path:
+        """
+        Convert the cortical statistics to a dataframe
+
+        Parameters
+        ----------
+        hemi : str
+            Hemisphere to map
+        force : bool, optional
+            Force overwrite of existing files, by default True
+
+        Returns
+        -------
+        Path
+            Path to the dataframe
+        """
+        out_regionwise_stats = (
+            self.layout.subject_dir
+            / "stats"
+            / f"{hemi}.{self.parcellation.name}.roi_stats.csv"
+        )
+        out_global_stats = (
+            self.layout.subject_dir
+            / "stats"
+            / f"{hemi}.{self.parcellation.name}.global_stats.csv"
+        )
+        if (
+            (not out_regionwise_stats.exists())
+            or (not out_global_stats.exists())
+            or force
+        ):
+            stats = CorticalStats(
+                str(self.layout.outputs["cortical_stats"][hemi])
+            )
+            stats.structural_measurements.to_csv(out_regionwise_stats)
+            stats.whole_brain_measurements.to_csv(out_global_stats)
+        return out_regionwise_stats, out_global_stats
+
     def run(self, force: bool = True) -> None:
         """
         Run the registration
@@ -135,6 +176,7 @@ class RegisterCorticalParcellation:
         """
         self.layout.outputs["cortical_annotation"] = {}
         self.layout.outputs["cortical_stats"] = {}
+        self.layout.outputs["cortical_stats_df"] = {}
         for hemi in ["lh", "rh"]:
             self.layout.outputs["cortical_annotation"][
                 hemi
@@ -142,3 +184,10 @@ class RegisterCorticalParcellation:
             self.layout.outputs["cortical_stats"][
                 hemi
             ] = self.calculate_parcellation_statistics(hemi, force=force)
+            hemi_df, hemi_global_df = self.convert_stats_to_dataframe(
+                hemi, force=force
+            )
+            self.layout.outputs["cortical_stats_df"][hemi] = {
+                "regional": hemi_df,
+                "global": hemi_global_df,
+            }
