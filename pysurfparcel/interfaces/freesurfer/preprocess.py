@@ -268,3 +268,70 @@ class MRIsAnatomicalStats(FSCommandOpenMP):
             out_basename,
         )
         return outputs
+
+
+class MRISegStatsInputSpec(FSTraitedSpecOpenMP):
+    # required
+    segmentation = File(
+        argstr="--seg %s",
+        mandatory=True,
+        desc="input segmentation volume",
+    )
+    ctab = File(
+        argstr="--ctab %s",
+        mandatory=True,
+        exists=True,
+        desc="Freesurfer color table file.",
+    )
+    excludeid = traits.List(
+        traits.Int,
+        argstr="--excludeid %s",
+        mandatory=False,
+        desc="list of segmentation ids to exclude",
+    )
+    out_file = File(
+        argstr="--sum %s",
+        mandatory=True,
+        exists=False,
+        keep_extension=True,
+        hash_files=False,
+        desc="ASCII file in which summary statistics are saved",
+    )
+    # optional
+    partial_volume = File(
+        argstr="--pv %s",
+        mandatory=False,
+        exists=True,
+        desc="Use pvvol to compenstate for partial voluming.",
+    )
+
+
+class MRISegStatsStatsOutputSpec(TraitedSpec):
+    out_file = File(
+        exists=False, desc="ASCII file in which summary statistics are saved"
+    )
+
+
+class MRISegStats(FSCommandOpenMP):
+    """
+    Computes statistics on a segmentation volume.
+
+    Examples
+    ========
+    >>> from nipype.interfaces import freesurfer
+    >>> segstats = freesurfer.MRIsSegStats()
+    >>> segstats.inputs.segmentation = 'aseg.mgz'
+    >>> segstats.inputs.ctab = 'FreeSurferColorLUT.txt'
+    >>> segstats.inputs.out_file = 'aseg.stats'
+    >>> segstats.cmdline
+    'mri_segstats --ctab FreeSurferColorLUT.txt --seg aseg.mgz --sum aseg.stats'
+    """
+
+    _cmd = "mri_segstats"
+    input_spec = MRISegStatsInputSpec
+    output_spec = MRISegStatsStatsOutputSpec
+
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs["out_file"] = self.inputs.out_file
+        return outputs

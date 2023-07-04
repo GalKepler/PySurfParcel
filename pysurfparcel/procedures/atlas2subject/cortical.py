@@ -1,4 +1,7 @@
 from pathlib import Path
+from pysurfparcel.procedures.atlas2subject.register_parcellation import (
+    RegisterParcellation,
+)
 from pysurfparcel.reoncall.layout.layout import Layout
 from qsipost.parcellations.atlases.atlas import Atlas
 from pysurfparcel.interfaces.freesurfer.preprocess import (
@@ -8,7 +11,7 @@ from pysurfparcel.interfaces.freesurfer.preprocess import (
 from freesurfer_statistics.cortical_stats import CorticalStats
 
 
-class RegisterCorticalParcellation:
+class RegisterCorticalParcellation(RegisterParcellation):
     """
     Register the cortical parcellation to the subject space
     """
@@ -19,28 +22,11 @@ class RegisterCorticalParcellation:
         "surfreg",
     ]
 
+    # init super class
     def __init__(
         self, layout: Layout, parcellation: Atlas, seed: int = 42
     ) -> None:
-        self.layout = layout
-        self.parcellation = parcellation
-        self.seed = seed
-        self.validate_required_inputs()
-
-    def validate_required_inputs(self):
-        """
-        Validate that the required inputs for both the layout and parcellation are present.
-        """
-        for key in self.REQUIRED_LAYOUT_KEYS:
-            if self.layout.outputs.get(key) is None:
-                raise FileNotFoundError(
-                    f"Missing required recon-all output: {key}"
-                )
-        for key in self.REQUIRED_PARCELLATION_KEYS:
-            if not hasattr(self.parcellation, key):
-                raise FileNotFoundError(
-                    f"Missing required parcellation file: {key}"
-                )
+        super().__init__(layout, parcellation, seed)
 
     def map_to_hemisphere(self, hemi: str, force: bool = False) -> Path:
         """
